@@ -1,0 +1,26 @@
+name: Issue Docs Sync
+
+# Realistic pattern: a bot that generates/commits content to the default branch
+# in response to a low-privilege event. Anyone can open an issue on a public repo.
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - name: Generate and commit
+        run: |
+          set -euo pipefail
+          mkdir -p generated
+          echo "generated from issue #${{ github.event.issue.number }}" > "generated/issue-${{ github.event.issue.number }}.md"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore: sync docs for issue #${{ github.event.issue.number }}"
+          git push origin HEAD:main
