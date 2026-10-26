@@ -1,0 +1,31 @@
+name: Trigger
+
+# Broadest possible unprivileged trigger surface. The point is to observe what
+# `github.event.workflow_run.event` reports for every event an outside actor can
+# cause in a public repository.
+on:
+  push:
+  pull_request:
+  pull_request_target:
+  issues:
+  issue_comment:
+  fork:
+  watch:
+  gollum:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  echo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report context
+        run: |
+          echo "GITHUB_EVENT_NAME=$GITHUB_EVENT_NAME"
+          echo "GITHUB_REF=$GITHUB_REF"
+          echo "GITHUB_SHA=$GITHUB_SHA"
+          echo "ACTOR=$GITHUB_ACTOR"
+          echo "--- event payload (trimmed) ---"
+          jq -c '{action, ref, before, after, number, sender: .sender.login}' "$GITHUB_EVENT_PATH"

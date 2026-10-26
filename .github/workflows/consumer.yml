@@ -1,0 +1,36 @@
+name: Consumer
+
+# The pattern under test: a privileged follow-up workflow gated purely on the
+# event name of the *triggering* run.
+on:
+  workflow_run:
+    workflows: [Trigger]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  # Always runs, so we get ground truth on every trigger.
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dump workflow_run context
+        run: |
+          echo "GITHUB_EVENT_NAME=$GITHUB_EVENT_NAME"
+          jq -c '{event: .workflow_run.event, name: .workflow_run.name, status: .workflow_run.status, conclusion: .workflow_run.conclusion, head_branch: .workflow_run.head_branch, head_sha: .workflow_run.head_sha, head_repository: .workflow_run.head_repository.full_name, run_number: .workflow_run.run_number, triggering_run: .workflow_run.html_url}' "$GITHUB_EVENT_PATH"
+
+  # This is the "workflow body" the attacker wants to execute.
+  guarded:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.event == 'push'
+    steps:
+      - name: CANARY privileged body
+        run: |
+          echo "CANARY_EXECUTED=true"
+          echo "workflow_run.event=${{ github.event.workflow_run.event }}"
+          echo "workflow_run.head_branch=${{ github.event.workflow_run.head_branch }}"
+          echo "workflow_run.head_sha=${{ github.event.workflow_run.head_sha }}"
+          echo "workflow_run.head_repository=${{ github.event.workflow_run.head_repository.full_name }}"
+          echo "actor=${{ github.actor }}"
+          echo "GITHUB_TOKEN perms are: contents=${{ github.token != '' }}"
