@@ -10,9 +10,12 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: dump
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
+      - name: check whether head_branch resolves to fork content
         run: |
-          echo "FILTERED_CONSUMER_RAN=true"
           echo "head_branch=${{ github.event.workflow_run.head_branch }}"
-          echo "event=${{ github.event.workflow_run.event }}"
           echo "head_repo=${{ github.event.workflow_run.head_repository.full_name }}"
+          echo "checked_out=$(git rev-parse HEAD)"
+          if [ -f .github/workflows/forged-producer.yml ]; then echo "CHECKOUT_ATTACKER_CODE=true"; else echo "CHECKOUT_ATTACKER_CODE=false"; fi
