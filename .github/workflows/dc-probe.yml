@@ -1,0 +1,24 @@
+name: DC Probe
+on:
+  workflow_run:
+    workflows: ["Trigger"]
+    types: [completed]
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  dc:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: report
+        run: |
+          echo "GITHUB_SHA=$GITHUB_SHA"
+          echo "GITHUB_REF=$GITHUB_REF"
+          echo "wfr_event=${{ github.event.workflow_run.event }}"
+          echo "wfr_head_sha=${{ github.event.workflow_run.head_sha }}"
+          echo "wfr_head_branch=${{ github.event.workflow_run.head_branch }}"
+          echo "wfr_head_repo=${{ github.event.workflow_run.head_repository.full_name }}"
+          echo "HEAD=$(git rev-parse HEAD)"
+          echo "LOG=$(git log -1 --format='%s')"
+          if [ -f attacker-marker.txt ]; then echo "CHECKOUT_ATTACKER_CODE=true"; else echo "CHECKOUT_ATTACKER_CODE=false"; fi
