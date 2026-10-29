@@ -1,0 +1,18 @@
+name: Branches Consumer
+on:
+  workflow_run:
+    workflows: ["Trigger"]
+    types: [completed]
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: dump
+        run: |
+          echo "FILTERED_CONSUMER_RAN=true"
+          echo "head_branch=${{ github.event.workflow_run.head_branch }}"
+          echo "event=${{ github.event.workflow_run.event }}"
+          echo "head_repo=${{ github.event.workflow_run.head_repository.full_name }}"
