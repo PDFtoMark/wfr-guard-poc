@@ -1,0 +1,9 @@
+name: jira-issue-sync-pr-review
+on:
+  pull_request_review:
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - run: echo "BASE-VERSION upstream review run"

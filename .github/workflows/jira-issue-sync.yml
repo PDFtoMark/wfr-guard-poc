@@ -1,0 +1,30 @@
+name: Sync GitHub Issues & Pull Requests to Jira
+on:
+  workflow_run:
+    workflows: [jira-issue-sync-pr-review]
+    types: [completed]
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+jobs:
+  sync:
+    if: github.event.workflow_run.event == 'pull_request_review'
+    runs-on: ubuntu-latest
+    steps:
+      - name: prove run context
+        run: |
+          echo "wfrun_event=${{ github.event.workflow_run.event }}"
+          echo "wfrun_head_sha=${{ github.event.workflow_run.head_sha }}"
+          echo "wfrun_actor=${{ github.event.workflow_run.actor.login }}"
+          echo "wfrun_name=${{ github.event.workflow_run.name }}"
+      - name: prove secret availability
+        env:
+          JIRA_PASS: ${{ secrets.JIRA_PASS }}
+        run: echo "secret_len=${#JIRA_PASS}"
+      - name: prove token write
+        env:
+          T: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          code=$(curl -s --max-time 20 -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $T" https://api.github.com/repos/PDFtoMark/wfr-guard-poc/issues)
+          echo "issues_list_http=$code"
