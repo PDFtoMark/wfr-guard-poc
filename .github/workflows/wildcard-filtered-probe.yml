@@ -1,0 +1,15 @@
+name: Probe wildcard-filtered-probe
+on:
+  workflow_run:
+    workflows: ["Trigger"]
+    types: [completed]
+    branches: ["**"]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "WILDCARD_FIRED=true"
+          jq -c '{event:.workflow_run.event,head_branch:.workflow_run.head_branch,head_repo:.workflow_run.head_repository.full_name,fork:.workflow_run.head_repository.fork}' "$GITHUB_EVENT_PATH"
