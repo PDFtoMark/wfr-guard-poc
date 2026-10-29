@@ -1,0 +1,27 @@
+name: SHA Checkout Probe
+on:
+  workflow_run:
+    workflows: ["Trigger"]
+    types: [completed]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: ctx
+        run: jq -c '{event:.workflow_run.event,head_branch:.workflow_run.head_branch,head_sha:.workflow_run.head_sha,head_repo:.workflow_run.head_repository.full_name,fork:.workflow_run.head_repository.fork,conclusion:.workflow_run.conclusion}' "$GITHUB_EVENT_PATH"
+      - name: checkout-pr-sha
+        id: co
+        continue-on-error: true
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - name: inspect
+        run: |
+          echo "CHECKOUT_OUTCOME=${{ steps.co.outcome }}"
+          echo "HEAD=$(git rev-parse HEAD 2>/dev/null || echo none)"
+          echo "FILES=$(ls | tr '\n' ' ')"
+          for f in pwn.txt attacker-marker.txt attacker-marker2.txt attacker-marker3.txt; do
+            if [ -f "$f" ]; then echo "ATTACKER_FILE_PRESENT=$f"; fi
+          done
