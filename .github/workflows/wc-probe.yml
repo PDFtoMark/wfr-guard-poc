@@ -1,0 +1,17 @@
+name: WC Probe
+on:
+  workflow_run:
+    workflows: ["Trigger"]
+    types: [completed]
+    branches: ["**"]
+permissions:
+  contents: read
+jobs:
+  wc:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "WILDCARD_FIRED=true"
+          echo "wfr_event=${{ github.event.workflow_run.event }}"
+          echo "wfr_head_branch=${{ github.event.workflow_run.head_branch }}"
+          echo "wfr_head_sha=${{ github.event.workflow_run.head_sha }}"
