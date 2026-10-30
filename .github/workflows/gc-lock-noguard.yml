@@ -1,0 +1,15 @@
+name: GuardCheckLockNoguard
+on:
+  workflow_run:
+    workflows: ['GuardCheckUpstream']
+    types: [completed]
+permissions:
+  contents: read
+  statuses: write
+  pull-requests: read
+jobs:
+  lock:
+    runs-on: ubuntu-latest
+    steps:
+      - name: control marker
+        run: echo "CONTROL-STEPS-EXECUTED repository=$GITHUB_REPOSITORY event=$GITHUB_EVENT_NAME"
