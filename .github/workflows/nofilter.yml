@@ -1,0 +1,16 @@
+name: NoFilter Consumer
+on:
+  workflow_run:
+    workflows: ["Build Node (Standard)"]
+    types: [completed]
+permissions: {}
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "NOFILTER_FIRED=true"
+          echo "GITHUB_REF=$GITHUB_REF"
+          echo "head_branch=${{ github.event.workflow_run.head_branch }}"
+          echo "trigger_event=${{ github.event.workflow_run.event }}"
+          echo "head_repo=${{ github.event.workflow_run.head_repository.full_name }}"
