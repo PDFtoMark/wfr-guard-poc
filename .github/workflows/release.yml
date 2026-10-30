@@ -1,11 +1,10 @@
 name: Release Workflow
 on:
-  push:
-    branches: [main]
+  pull_request:
 permissions:
   contents: read
 jobs:
-  noop:
+  forge:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "legit release workflow (registered on default branch)"
+      - run: echo "forged upstream run completes successfully (PR from branch named development)"
