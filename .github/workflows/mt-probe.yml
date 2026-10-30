@@ -1,0 +1,22 @@
+name: MT Probe
+on:
+  workflow_run:
+    workflows: ["Acceptance Tests"]
+    types: [completed]
+    branches: ["release-please**"]
+permissions: {}
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: ctx
+        run: |
+          echo "MT_PROBE_FIRED=true"
+          jq -c '{event:.workflow_run.event,name:.workflow_run.name,head_branch:.workflow_run.head_branch,head_sha:.workflow_run.head_sha,head_repo:.workflow_run.head_repository.full_name,fork:.workflow_run.head_repository.fork}' "$GITHUB_EVENT_PATH"
+      - uses: actions/checkout@v4
+      - name: inspect
+        run: |
+          echo "GITHUB_REF=$GITHUB_REF"
+          echo "GITHUB_SHA=$GITHUB_SHA"
+          echo "HEAD=$(git rev-parse HEAD)"
+          if [ -f attacker-script.sh ]; then echo "ATTACKER_CODE_IN_CHECKOUT=true"; else echo "ATTACKER_CODE_IN_CHECKOUT=false"; fi
