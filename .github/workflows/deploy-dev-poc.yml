@@ -1,0 +1,27 @@
+name: Deploy development (PoC mirror of epam gate)
+
+permissions:
+  contents: read
+
+on:
+  workflow_run:
+    workflows: ["Release Workflow"]
+    types:
+      - completed
+
+jobs:
+  gitlab-dev-deploy:
+    if: |
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'development')
+    runs-on: ubuntu-latest
+    steps:
+      - name: show context and secret
+        env:
+          DEPLOY_CANARY: ${{ secrets.DEPLOY_CANARY }}
+        run: |
+          echo "GATE_PASSED=true"
+          echo "upstream head_branch=${{ github.event.workflow_run.head_branch }}"
+          echo "upstream conclusion=${{ github.event.workflow_run.conclusion }}"
+          echo "upstream event=${{ github.event.workflow_run.event }}"
+          echo "upstream head_repo=${{ github.event.workflow_run.head_repository.full_name }}"
+          if [ -n "$DEPLOY_CANARY" ]; then echo "DEPLOY_SECRET_PRESENT=yes len=${#DEPLOY_CANARY}"; else echo "DEPLOY_SECRET_PRESENT=no"; fi
