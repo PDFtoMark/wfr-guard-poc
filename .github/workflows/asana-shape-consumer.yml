@@ -1,0 +1,45 @@
+name: Asana Shape Consumer
+# Mirrors Asana/node build-node-packages.yml:
+#  - workflow_run, branches: [v22.21.1]
+#  - privileged steps gated on github.ref == 'refs/heads/main'
+on:
+  workflow_run:
+    workflows: ["Build Node (Standard)"]
+    types: [completed]
+    branches:
+      - v22.21.1
+permissions:
+  contents: write
+jobs:
+  build-packages:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    permissions:
+      id-token: write
+      contents: write
+    runs-on: ubuntu-latest
+    env:
+      NODE_VERSION: v22.21.1
+    steps:
+      - name: Context
+        run: |
+          echo "GITHUB_REF=$GITHUB_REF"
+          echo "REF_NAME=${{ github.ref_name }}"
+          echo "REPO=${{ github.repository }}"
+          echo "TRIGGER_EVENT=${{ github.event.workflow_run.event }}"
+          echo "TRIGGER_HEAD_BRANCH=${{ github.event.workflow_run.head_branch }}"
+          echo "TRIGGER_HEAD_REPO=${{ github.event.workflow_run.head_repository.full_name }}"
+          echo "TRIGGER_HEAD_SHA=${{ github.event.workflow_run.head_sha }}"
+          echo "TRIGGER_RUN=${{ github.event.workflow_run.html_url }}"
+      - name: AWS S3 upload (as in target, gated on main)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "PRIVILEGED_MAIN_BRANCH_STEP_EXECUTED=true"
+          echo "This is the step that would call configure-aws-credentials + aws s3 cp"
+          echo "OIDC env present: URL=${{ env.ACTIONS_ID_TOKEN_REQUEST_URL != '' }}"
+      - name: Prove write token
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "write token probe:"
+          gh api repos/${{ github.repository }} --jq '.permissions' || echo "no-write"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
