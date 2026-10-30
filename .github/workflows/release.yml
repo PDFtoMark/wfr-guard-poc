@@ -1,0 +1,11 @@
+name: Release Workflow
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  noop:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "legit release workflow (registered on default branch)"
