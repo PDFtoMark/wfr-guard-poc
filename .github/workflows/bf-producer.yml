@@ -1,0 +1,11 @@
+name: BFProducer
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "BF producer ran event=$GITHUB_EVENT_NAME"
