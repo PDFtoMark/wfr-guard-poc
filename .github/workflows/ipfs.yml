@@ -1,0 +1,16 @@
+name: ipfs
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Upstream run
+        run: |
+          echo "UPSTREAM_EVENT=$GITHUB_EVENT_NAME"
+          echo "UPSTREAM_REF=$GITHUB_REF"
