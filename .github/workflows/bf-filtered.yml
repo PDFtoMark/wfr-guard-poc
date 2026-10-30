@@ -1,0 +1,14 @@
+name: BF Filtered
+on:
+  workflow_run:
+    workflows: ["BFProducer"]
+    types: [completed]
+    branches: [main]
+permissions: {}
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          jq -c '{event:.workflow_run.event,head_branch:.workflow_run.head_branch,head_repo:.workflow_run.head_repository.full_name,fork:.workflow_run.head_repository.fork}' "$GITHUB_EVENT_PATH"
+          echo "GITHUB_REF=$GITHUB_REF"
