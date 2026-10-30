@@ -1,0 +1,18 @@
+name: GuardCheckLock
+on:
+  workflow_run:
+    workflows: ['GuardCheckUpstream']
+    types: [completed]
+permissions:
+  contents: read
+  statuses: write
+  pull-requests: read
+jobs:
+  lock:
+    runs-on: ubuntu-latest
+    if: github.repository == 'PDFtoMark/guardcheck-does-not-exist'
+    env:
+      PRODUCTION_REPO_TOKEN: ${{ secrets.PRODUCTION_REPO_TOKEN }}
+    steps:
+      - name: guard test marker
+        run: echo "STEPS-EXECUTED repository=$GITHUB_REPOSITORY secret_len=${#PRODUCTION_REPO_TOKEN}"
