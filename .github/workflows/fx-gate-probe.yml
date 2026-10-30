@@ -1,0 +1,34 @@
+name: FX Gate Probe
+
+# Replicates the exact gate used by vercel-labs/fx dev-release.yml and
+# publish-libfx.yml to decide whether the privileged body may run.
+on:
+  workflow_run:
+    workflows: [Trigger]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dump workflow_run context
+        run: |
+          echo "GITHUB_EVENT_NAME=$GITHUB_EVENT_NAME"
+          jq -c '{event: .workflow_run.event, name: .workflow_run.name, conclusion: .workflow_run.conclusion, head_branch: .workflow_run.head_branch, head_sha: .workflow_run.head_sha, head_repository: .workflow_run.head_repository.full_name, triggering_run: .workflow_run.html_url}' "$GITHUB_EVENT_PATH"
+
+  fx-gate:
+    name: FX exact gate
+    runs-on: ubuntu-latest
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    steps:
+      - name: PRIVILEGED CANARY
+        run: |
+          echo "FX_GATE_BYPASSED=true"
+          echo "secrets would be exposed here"
