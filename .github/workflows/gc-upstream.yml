@@ -1,0 +1,9 @@
+name: GuardCheckUpstream
+on:
+  push:
+    branches: [main]
+jobs:
+  fake:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "upstream ran"
