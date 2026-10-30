@@ -1,0 +1,17 @@
+name: DotFilter Consumer
+on:
+  workflow_run:
+    workflows: ["Trigger"]
+    types: [completed]
+    branches:
+      - v22.21.1
+permissions: {}
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "DOTFILTER_FIRED=true"
+          echo "GITHUB_REF=$GITHUB_REF"
+          echo "head_branch=${{ github.event.workflow_run.head_branch }}"
+          echo "head_repo=${{ github.event.workflow_run.head_repository.full_name }}"
