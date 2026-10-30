@@ -1,0 +1,28 @@
+name: ipfs deploy gate test
+on:
+  workflow_run:
+    workflows: [ipfs]
+    types: [requested]
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dump workflow_run context
+        run: |
+          echo "EVENT_NAME=$GITHUB_EVENT_NAME"
+          jq -c '{event: .workflow_run.event, name: .workflow_run.name, head_branch: .workflow_run.head_branch, head_sha: .workflow_run.head_sha, head_repository: .workflow_run.head_repository.full_name, prs: .workflow_run.pull_requests}' "$GITHUB_EVENT_PATH"
+
+  guarded:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.event == 'push'
+    steps:
+      - name: Privileged body
+        run: |
+          echo "GATE_OPEN=true"
+          echo "EVENT=${{ github.event.workflow_run.event }}"
+          echo "SECRET_PRESENT=${{ secrets.REACT_APP_PINATA_SECRET_API_KEY != '' }}"
