@@ -1,0 +1,33 @@
+name: GAB Validate Mirror Nofilter
+on:
+  workflow_run:
+    types:
+      - completed
+    workflows:
+      - GAB Release Mirror
+permissions: {}
+jobs:
+  core:
+    name: Lint & Test
+    permissions:
+      checks: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: ctx
+        run: |
+          echo "GITHUB_WORKFLOW=$GITHUB_WORKFLOW"
+          echo "GITHUB_REF=$GITHUB_REF"
+          echo "GITHUB_SHA=$GITHUB_SHA"
+          jq -c '{event:.workflow_run.event,name:.workflow_run.name,head_branch:.workflow_run.head_branch,head_sha:.workflow_run.head_sha,head_repo:.workflow_run.head_repository.full_name,fork:.workflow_run.head_repository.fork,conclusion:.workflow_run.conclusion}' "$GITHUB_EVENT_PATH"
+          echo "GAB_SECRET_PRESENT=$([ -n "$GAB_PROBE" ] && echo yes || echo no)"
+        env:
+          GAB_PROBE: ${{ secrets.GAB_PROBE }}
+      - name: Check out repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          token: ${{ secrets.SEEK_OSS_CI_GITHUB_TOKEN || github.token }}
+      - name: inspect
+        run: |
+          echo "HEAD=$(git rev-parse HEAD)"
+          git log --oneline -3
+          if [ -f GAB_MARKER.txt ]; then echo "PR_HEAD_MARKER_PRESENT=true"; else echo "PR_HEAD_MARKER_PRESENT=false"; fi
