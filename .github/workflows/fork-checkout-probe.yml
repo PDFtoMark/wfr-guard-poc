@@ -1,0 +1,26 @@
+name: Fork PR Default Checkout Probe
+on:
+  workflow_run:
+    workflows: ["Prepare Release"]
+    types: [completed]
+permissions:
+  contents: write
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Upstream context
+        run: jq -c '{event:.workflow_run.event,head_branch:.workflow_run.head_branch,head_sha:.workflow_run.head_sha,head_repo:.workflow_run.head_repository.full_name,fork:.workflow_run.head_repository.fork,pr:.workflow_run.pull_requests}' "$GITHUB_EVENT_PATH"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Inspect default checkout
+        run: |
+          echo "DEFAULT_CHECKOUT_HEAD=$(git rev-parse HEAD)"
+          echo "GITHUB_SHA=$GITHUB_SHA"
+          echo "GITHUB_REF=$GITHUB_REF"
+          echo "REMOTE_BRANCHES=$(git rev-parse --abbrev-ref HEAD)"
+          if [ -f FORKMARKER.txt ]; then echo "FORK_MARKER_PRESENT=true"; cat FORKMARKER.txt; else echo "FORK_MARKER_PRESENT=false"; fi
+          echo "TOKEN_SCOPED_SECRET_PRESENT=$([ -n "$DUMMYSECRET" ] && echo yes || echo no)"
+        env:
+          DUMMYSECRET: ${{ secrets.DUMMYSECRET }}
