@@ -1,0 +1,8 @@
+name: Build
+on:
+  workflow_dispatch:
+jobs:
+  noop:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "legit Build workflow on default branch"
