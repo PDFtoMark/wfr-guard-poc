@@ -1,0 +1,40 @@
+name: GAB Release Mirror
+on:
+  workflow_run:
+    workflows: ["Tag Release"]
+    types: [completed]
+jobs:
+  release:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Extract version
+        run: |
+          version=$(grep -oP '^VERSION=\K[0-9]+\.[0-9]+\.[0-9]+' VERSION.txt)
+          echo "VERSION=${version}" >> "$GITHUB_ENV"
+      - name: Build Changelog
+        id: github_release
+        uses: mikepenz/release-changelog-builder-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          configurationJson: |
+            {
+              "pr_template": "- #{{TITLE}} (##{{NUMBER}})",
+              "categories": [
+                {"title": "## Features", "labels": ["feature","feat"]},
+                {"title": "## Fixes", "labels": ["fix"]}
+              ]
+            }
+      - name: Create Release
+        uses: mikepenz/action-gh-release@v0.2.0-a03
+        with:
+          tag_name: v${{ env.VERSION }}
+          body: |
+            ${{steps.github_release.outputs.changelog}}
+
+            Game bridge built from Immutable Typescript SDK version 0.0.0-poc
