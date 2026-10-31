@@ -1,4 +1,4 @@
-name: Create Release
+name: AIS Create Release
 
 on:
   pull_request:
