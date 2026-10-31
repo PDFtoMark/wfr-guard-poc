@@ -1,0 +1,31 @@
+name: Loadtest
+on:
+  workflow_run:
+    workflows: [Deploy Stage]
+    types:
+      - completed
+concurrency: loadtest
+env:
+  ZKSYNC_ENV: loadtest
+jobs:
+  loadtest:
+    name: Perform loadtest
+    runs-on: ubuntu-latest
+    env:
+      WEB3_URL: ${{ secrets.CI_LOADTEST_WEB3_URL }}
+      MASTER_WALLET_PK: ${{ secrets.CI_LOADTEST_MAIN_PRIVKEY }}
+      ZZ_CANARY: ${{ secrets.ZZ_CANARY }}
+      ACCOUNTS_AMOUNT: 200
+      OPERATIONS_PER_ACCOUNT: 500
+    steps:
+      - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3
+      - name: Run loadtest
+        run: |
+          echo "TRIGGER_EVENT=${{ github.event.workflow_run.event }}"
+          echo "TRIGGER_HEAD_REPO=${{ github.event.workflow_run.head_repository.full_name }}"
+          echo "TRIGGER_HEAD_BRANCH=${{ github.event.workflow_run.head_branch }}"
+          echo "GITHUB_REF=$GITHUB_REF"
+          echo "CHECKOUT_HEAD=$(git rev-parse HEAD)"
+          echo "CANARY_PRESENT=$([ -n "$ZZ_CANARY" ] && echo yes || echo no)"
+          echo "PRIVKEY_SECRET_PRESENT=$([ -n "$MASTER_WALLET_PK" ] && echo yes || echo no)"
+          echo "WOULD_EXECUTE=cargo run --bin loadnext (100000 txs)"
