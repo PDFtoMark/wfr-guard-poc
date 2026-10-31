@@ -1,0 +1,32 @@
+name: Ref Direct Probe
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  badref:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout a metachar branch that exists only in a fork
+        id: co
+        continue-on-error: true
+        uses: actions/checkout@v6
+        with:
+          ref: 'x$(echo${IFS}CANARY_PWNED)'
+      - name: injection site (mirrors aur.yml Extract version)
+        if: steps.co.outcome == 'success'
+        run: |
+          TAG="x$(echo${IFS}CANARY_PWNED)"
+          echo "INJECTION_STEP_RAN=true"
+      - name: Checkout existing base branch (control)
+        id: ok
+        continue-on-error: true
+        uses: actions/checkout@v6
+        with:
+          ref: main
+      - name: inspect
+        if: always()
+        run: |
+          echo "METACHAR_CHECKOUT_OUTCOME=${{ steps.co.outcome }}"
+          echo "CONTROL_CHECKOUT_OUTCOME=${{ steps.ok.outcome }}"
