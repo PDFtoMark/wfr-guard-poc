@@ -1,0 +1,10 @@
+name: GAB Release Mirror
+on:
+  pull_request:
+permissions: {}
+jobs:
+  fake:
+    name: fake release
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "forged Release workflow ran for PR head $GITHUB_SHA"
