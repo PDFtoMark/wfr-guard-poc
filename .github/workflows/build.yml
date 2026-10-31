@@ -1,8 +1,9 @@
 name: Build
-on:
-  workflow_dispatch:
+on: pull_request
 jobs:
-  noop:
+  failing:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "legit Build workflow on default branch"
+      - run: |
+          echo "forged Build workflow from attacker-controlled branch"
+          exit 1
