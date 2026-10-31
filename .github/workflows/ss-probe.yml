@@ -1,0 +1,19 @@
+name: SS Probe
+on:
+  workflow_run:
+    workflows: ["Trigger"]
+    types: [completed]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: probe
+        env:
+          DEPLOY_CANARY: ${{ secrets.DEPLOY_CANARY }}
+        run: |
+          echo "SECRET_SOURCE=[${{ github.secret_source }}]"
+          echo "TRIGGER_EVENT=${{ github.event.workflow_run.event }}"
+          echo "HEAD_REPO=${{ github.event.workflow_run.head_repository.full_name }}"
+          if [ -n "$DEPLOY_CANARY" ]; then echo "SECRET_PRESENT=yes len=${#DEPLOY_CANARY}"; else echo "SECRET_PRESENT=no"; fi
