@@ -1,0 +1,51 @@
+name: Badge Mirror Probe
+
+# Mirrors Meesho/BharatMLStack .github/workflows/update-badges.yml
+# (workflow_run + actions/checkout@v4 with ref = triggering run head_sha,
+#  then `git push origin HEAD:<triggering run head_branch>`).
+on:
+  workflow_run:
+    workflows: ["Trigger"]
+    types:
+      - completed
+
+permissions:
+  contents: write
+
+jobs:
+  update-badges:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion != 'cancelled'
+    steps:
+      - name: Context
+        run: jq -c '{event:.workflow_run.event,head_branch:.workflow_run.head_branch,head_sha:.workflow_run.head_sha,head_repo:.workflow_run.head_repository.full_name}' "$GITHUB_EVENT_PATH"
+
+      - name: Checkout code
+        id: co
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Update root README
+        run: |
+          echo "REACHED_README_STEP"
+          echo probe >> README.md
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add README.md
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update build status badges [skip ci]"
+            git push origin HEAD:${{ github.event.workflow_run.head_branch }}
+          fi
+
+      - name: Post check
+        if: always()
+        run: |
+          echo "REACHED_POST_STEP"
+          if [ -f pwned_id ]; then echo "INJECTION_EXECUTED"; cat pwned_id; else echo "NO_INJECTION_ARTIFACT"; fi
