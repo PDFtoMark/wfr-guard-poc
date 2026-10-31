@@ -1,0 +1,11 @@
+name: AIS Create Release
+
+on:
+  pull_request:
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Forged successful release run
+        run: echo "FORGED_RELEASE_RUN_OK"
