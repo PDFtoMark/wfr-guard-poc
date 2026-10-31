@@ -1,0 +1,7 @@
+name: Deploy Stage
+on: pull_request
+jobs:
+  forged:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "attacker-forged Deploy Stage run completed"
