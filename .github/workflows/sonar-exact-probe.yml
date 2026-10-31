@@ -1,0 +1,27 @@
+name: Sonar Exact Probe
+# Replicates adobe/aem-angular-editable-components .github/workflows/sonar.yml checkout step
+on:
+  workflow_run:
+    workflows: ["Trigger"]
+    types: [completed]
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: ctx
+        run: jq -c '{event:.workflow_run.event,conclusion:.workflow_run.conclusion,prs:.workflow_run.pull_requests,head_repo:.workflow_run.head_repository.full_name,head_branch:.workflow_run.head_branch,head_sha:.workflow_run.head_sha}' "$GITHUB_EVENT_PATH"
+      - name: target-pattern-checkout
+        id: co
+        continue-on-error: true
+        uses: actions/checkout@v2
+        with:
+          repository: ${{ github.event.workflow_run.head_repository.full_name }}
+          ref: ${{ github.event.workflow_run.head_branch }}
+          fetch-depth: 0
+      - name: inspect
+        if: always()
+        run: |
+          echo "CHECKOUT_OUTCOME=${{ steps.co.outcome }}"
+          echo "WS_FILES=$(ls -A | tr '\n' ' ')"
+          if [ -f SONAR_PWN_MARKER.txt ]; then echo "ATTACKER_CODE_PRESENT=true"; cat SONAR_PWN_MARKER.txt; else echo "ATTACKER_CODE_PRESENT=false"; fi
+          echo "REACHED_SONAR_STEP=true"
