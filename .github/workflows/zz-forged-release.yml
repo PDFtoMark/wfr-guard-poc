@@ -1,0 +1,11 @@
+name: AIS Create Release
+
+on:
+  pull_request:
+
+jobs:
+  forged:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Forged release run (unprivileged fork PR context)
+        run: echo "FORGED_RELEASE_RUN_OK"
