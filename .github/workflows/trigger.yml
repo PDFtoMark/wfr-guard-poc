@@ -1,8 +1,5 @@
 name: Trigger
 
-# Broadest possible unprivileged trigger surface. The point is to observe what
-# `github.event.workflow_run.event` reports for every event an outside actor can
-# cause in a public repository.
 on:
   push:
   pull_request:
@@ -24,8 +21,16 @@ jobs:
       - name: Report context
         run: |
           echo "GITHUB_EVENT_NAME=$GITHUB_EVENT_NAME"
-          echo "GITHUB_REF=$GITHUB_REF"
-          echo "GITHUB_SHA=$GITHUB_SHA"
           echo "ACTOR=$GITHUB_ACTOR"
-          echo "--- event payload (trimmed) ---"
-          jq -c '{action, ref, before, after, number, sender: .sender.login}' "$GITHUB_EVENT_PATH"
+      - name: Attacker-controlled test report artifact
+        run: |
+          mkdir -p out
+          cat > out/TEST-evil.xml <<'XML'
+          <testsuite name="attacker" tests="1" failures="0">
+            <testcase name="FORK-PR-INJECTED-ROW" classname="io.trino.Fake" time="0.001"/>
+          </testsuite>
+          XML
+      - uses: actions/upload-artifact@v7
+        with:
+          name: test report forkpr
+          path: out/TEST-*.xml
