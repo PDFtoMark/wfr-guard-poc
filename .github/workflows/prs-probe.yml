@@ -1,0 +1,22 @@
+name: PRs Probe
+on:
+  workflow_run:
+    workflows: [Trigger]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dump payload
+        run: |
+          jq -c '.workflow_run | {event, head_branch, head_repository: .head_repository.full_name, prs_len: (.pull_requests|length), pull_requests: .pull_requests}' "$GITHUB_EVENT_PATH"
+      - name: Vulnerable pattern exact line from action
+        run: |
+          pull_requests_json='${{ toJson(github.event.workflow_run.pull_requests) }}'
+          echo "RAW_ASSIGNMENT_OK"
+          pr_number=$(echo "$pull_requests_json" | jq -r '.[0].number')
+          echo "pr_number=$pr_number"
