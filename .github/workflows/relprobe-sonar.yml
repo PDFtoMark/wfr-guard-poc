@@ -1,0 +1,57 @@
+name: Sonar Probe
+
+on:
+  workflow_run:
+    workflows: ['Release Probe Workflow']
+    types:
+      - completed
+
+jobs:
+  sonar:
+    name: Sonar analysis
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    permissions:
+      actions: read
+      pull-requests: write
+      statuses: write
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.0
+        with:
+          repository: ${{ github.event.workflow_run.head_repository.full_name }}
+          ref: ${{ github.event.workflow_run.head_branch }}
+          fetch-depth: 0
+
+      - name: Download cached artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.1.8
+        with:
+          name: sonar-artifact
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          merge-multiple: true
+
+      - name: Extract output artifact
+        shell: bash
+        run: tar -xf output.tar
+
+      - name: Read pull request event
+        shell: bash
+        run: |
+          echo "pr_number=$(sed '1q;d' pr-event.txt)" >> "$GITHUB_ENV"
+          echo "pr_head_ref=$(sed '2q;d' pr-event.txt)" >> "$GITHUB_ENV"
+          echo "pr_base_ref=$(sed '3q;d' pr-event.txt)" >> "$GITHUB_ENV"
+
+      - name: Inspect attacker-controlled workspace
+        shell: bash
+        run: |
+          echo "TRIGGER_EVENT=${{ github.event.workflow_run.event }}"
+          echo "TRIGGER_REPO=${{ github.event.workflow_run.head_repository.full_name }}"
+          echo "TRIGGER_BRANCH=${{ github.event.workflow_run.head_branch }}"
+          echo "PR_NUMBER=$pr_number PR_HEAD_REF=$pr_head_ref PR_BASE_REF=$pr_base_ref"
+          echo "WORKSPACE_HEAD=$(git rev-parse HEAD)"
+          if [ -f SONAR_PWN_MARKER.txt ]; then echo "ATTACKER_REPO_CONTENT_PRESENT=true"; cat SONAR_PWN_MARKER.txt; else echo "ATTACKER_REPO_CONTENT_PRESENT=false"; fi
+          if [ -f sonar-project.properties ]; then echo "SONAR_PROPS_READ_FROM_ATTACKER_WORKSPACE=true"; head -20 sonar-project.properties; else echo "SONAR_PROPS_READ_FROM_ATTACKER_WORKSPACE=false"; fi
+          echo "SONAR_TOKEN_PRESENT=$([ -n "$SONAR_TOKEN" ] && echo yes || echo no)"
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
