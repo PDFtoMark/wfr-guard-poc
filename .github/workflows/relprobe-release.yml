@@ -1,0 +1,31 @@
+name: Release Probe Workflow
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.0
+
+      - name: Record PR event
+        run: |
+          echo "${{ github.event.pull_request.number }}" > pr-event.txt
+          echo "${{ github.head_ref }}" >> pr-event.txt
+          echo "${{ github.base_ref }}" >> pr-event.txt
+          cat pr-event.txt
+
+      - name: Pack artifact
+        run: tar -cf output.tar pr-event.txt
+
+      - name: Upload sonar artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: sonar-artifact
+          path: output.tar
