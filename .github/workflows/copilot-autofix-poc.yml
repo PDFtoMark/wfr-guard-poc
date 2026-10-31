@@ -1,0 +1,42 @@
+name: GAB Copilot Autofix POC
+on:
+  workflow_run:
+    workflows: ["Build"]
+    types: [completed]
+permissions:
+  pull-requests: write
+jobs:
+  poc:
+    runs-on: ubuntu-latest
+    if: |
+      github.event.workflow_run.conclusion == 'failure' &&
+      startsWith(github.event.workflow_run.head_branch, 'dependabot/')
+    steps:
+      - name: show forged run context
+        run: |
+          echo "EVENT=${{ github.event.workflow_run.event }}"
+          echo "NAME=${{ github.event.workflow_run.name }}"
+          echo "HEAD_BRANCH=${{ github.event.workflow_run.head_branch }}"
+          echo "HEAD_REPO=${{ github.event.workflow_run.head_repository.full_name }}"
+          echo "FORK=${{ github.event.workflow_run.head_repository.fork }}"
+      - name: lookup PR (exact target query + relaxed query)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          echo "--- with dependabot author gate ---"
+          gh pr list --repo "$REPO" --state open --head "$HEAD_BRANCH" --author "app/dependabot" --json number --jq '.[0].number // empty'
+          echo "--- without author gate (relaxed, to prove write path) ---"
+          gh pr list --repo "$REPO" --state open --head "$HEAD_BRANCH" --json number --jq '.[0].number // empty'
+      - name: post comment with write token
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          PR=$(gh pr list --repo "$REPO" --state open --head "$HEAD_BRANCH" --json number --jq '.[0].number // empty')
+          if [ -z "$PR" ]; then echo "no PR matched"; exit 0; fi
+          gh pr comment "$PR" --repo "$REPO" --body "GAB POC: privileged comment posted from workflow_run job for run ID $RUN_ID"
+          echo "COMMENTED_ON=$PR"
