@@ -1,0 +1,52 @@
+name: Ref Branch Probe
+on:
+  workflow_run:
+    workflows: ["Trigger"]
+    types: [completed]
+permissions:
+  contents: read
+jobs:
+  # Faithful mirror of the aether aur.yml shape: checkout of head_branch first,
+  # then a run: step that interpolates head_branch into shell.
+  faithful:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
+      - name: Extract version
+        run: |
+          TAG="${{ github.event.workflow_run.head_branch }}"
+          echo "INJECTION_STEP_RAN=true"
+          echo "pkgver=${TAG#v}" >> "$GITHUB_OUTPUT"
+          echo "--- end ---"
+
+  # Diagnostic: same input, but checkout failure is tolerated so we can capture
+  # the exact checkout outcome and whether the interpolation step would run.
+  diagnostic:
+    runs-on: ubuntu-latest
+    steps:
+      - name: ctx
+        run: |
+          jq -c '{event:.workflow_run.event, head_branch:.workflow_run.head_branch, head_repo:.workflow_run.head_repository.full_name, fork:.workflow_run.head_repository.fork, conclusion:.workflow_run.conclusion}' "$GITHUB_EVENT_PATH"
+      - name: Checkout
+        id: co
+        continue-on-error: true
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
+      - name: Extract version (interpolation site)
+        if: steps.co.outcome == 'success'
+        run: |
+          TAG="${{ github.event.workflow_run.head_branch }}"
+          echo "INJECTION_STEP_RAN=true"
+          echo "pkgver=${TAG#v}" >> "$GITHUB_OUTPUT"
+      - name: inspect
+        if: always()
+        run: |
+          echo "CHECKOUT_OUTCOME=${{ steps.co.outcome }}"
+          echo "HEAD=$(git rev-parse HEAD 2>/dev/null || echo none)"
+          echo "SECRET_PRESENT=$([ -n "$DEPLOY_CANARY" ] && echo yes || echo no)"
+        env:
+          DEPLOY_CANARY: ${{ secrets.DEPLOY_CANARY }}
