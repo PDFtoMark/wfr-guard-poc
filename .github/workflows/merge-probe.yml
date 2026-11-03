@@ -1,0 +1,47 @@
+name: Merge SHA Probe
+on:
+  workflow_run:
+    workflows: ["Trigger"]
+    types: [completed]
+permissions:
+  contents: read
+  pull-requests: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: context
+        run: |
+          jq -c '{event:.workflow_run.event,head_sha:.workflow_run.head_sha,head_branch:.workflow_run.head_branch,head_repo:.workflow_run.head_repository.full_name,head_id:.workflow_run.head_repository.id,base_id:.repository.id,prs:.workflow_run.pull_requests}' "$GITHUB_EVENT_PATH"
+      - name: resolve merge commit sha
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SHA=$(jq -r '.workflow_run.head_sha' "$GITHUB_EVENT_PATH")
+          echo "looking for PR with head sha $SHA"
+          MERGE=""
+          for i in 1 2 3 4 5 6; do
+            MERGE=$(gh api "repos/${{ github.repository }}/pulls?state=all&per_page=100" \
+              --jq ".[] | select(.head.sha==\"$SHA\") | .merge_commit_sha" 2>/dev/null | head -1)
+            if [ -n "$MERGE" ] && [ "$MERGE" != "null" ]; then break; fi
+            sleep 5
+          done
+          echo "merge_sha=$MERGE" >> "$GITHUB_OUTPUT"
+          echo "MERGE_SHA=$MERGE"
+      - name: checkout merge commit with checkout v2
+        id: co
+        if: steps.pr.outputs.merge_sha != '' && steps.pr.outputs.merge_sha != 'null'
+        continue-on-error: true
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ steps.pr.outputs.merge_sha }}
+      - name: inspect checkout
+        run: |
+          echo "CHECKOUT_OUTCOME=${{ steps.co.outcome }}"
+          echo "HEAD=$(git rev-parse HEAD 2>/dev/null || echo none)"
+          if [ -f guard-marker.txt ]; then echo "FORK_PR_FILE_PRESENT=true"; cat guard-marker.txt; else echo "FORK_PR_FILE_PRESENT=false"; fi
+      - name: docker build from fork-controlled Dockerfile
+        if: steps.co.outcome == 'success'
+        run: |
+          docker build -f Dockerfile.ci --target main . && echo DOCKER_BUILD_OK || echo DOCKER_BUILD_FAILED
