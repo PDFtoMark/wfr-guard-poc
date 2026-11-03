@@ -1,0 +1,88 @@
+# By calling this ci via `workflow_call` from another ci it has permissions to comment on prs from forks
+# This action expects the a artifact named `content` to be present in the workflow run
+# If the artifact contains a pr_number.txt, the action will comment on that pr. If not it comments on the commit.
+# The content of the messages composed by concatenating all *.txt files within content into a single file
+# If you want to enforce a specific order, you need to name the files in a way that sorts in the desired order
+name: comment-pr-results
+
+on:
+  workflow_call:
+
+jobs:
+  artifacts:
+    name: Generate artifacts matrix
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix || '[]' }}
+      pr_number: ${{ steps.set-matrix.outputs.pr_number }}
+    steps:
+      - name: Download artifacts
+        id: download
+        uses: dawidd6/action-download-artifact@72aaadce3bc708349fc665eee3785cbb1b6e51d0 # v3.1.1
+        with:
+          run_id: ${{ github.event.workflow_run.id }}
+          github_token: ${{ github.token }}
+          name: content*
+          name_is_regexp: true
+          path: /tmp/content
+          if_no_artifact_found: warn
+
+      - id: set-matrix
+        if: ${{ steps.download.outputs.found_artifact == 'true' }}
+        run: |
+          pr_number=$(find /tmp/content/* -maxdepth 2 -name 'pr_number.txt' -print -quit)
+          if test -n "$pr_number"
+          then
+              echo "pr_number=$(cat $pr_number)" >> $GITHUB_OUTPUT
+              rm /tmp/content/**/pr_number.txt
+          fi
+          echo "matrix=$(ls /tmp/content/**/*.txt | jq -R -s -c 'split("\n")[:-1]')" >> $GITHUB_OUTPUT
+  comment:
+    needs: artifacts
+    if: ${{ needs.artifacts.outputs.matrix != '[]' }}
+    name: Comment Bot
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        artifact: ${{ fromJson(needs.artifacts.outputs.matrix) }}
+    steps:
+      - name: Download artifacts
+        uses: dawidd6/action-download-artifact@72aaadce3bc708349fc665eee3785cbb1b6e51d0 # v3.1.1
+        with:
+          run_id: ${{ github.event.workflow_run.id }}
+          github_token: ${{ github.token }}
+          name: content*
+          name_is_regexp: true
+          path: /tmp/content
+
+      - name: Prepare comment
+        run: |
+          echo "<!-- ${{ matrix.artifact }} -->" > /tmp/comment
+          cat ${{ matrix.artifact }} >> /tmp/comment
+
+      - name: Find Comment
+        uses: peter-evans/find-comment@v3
+        id: fc
+        if: ${{ needs.artifacts.outputs.pr_number != null }}
+        with:
+          issue-number: ${{ needs.artifacts.outputs.pr_number }}
+          comment-author: "github-actions[bot]"
+          body-includes: <!-- ${{ matrix.artifact }} -->
+
+      - name: Create or update pr comment
+        uses: peter-evans/create-or-update-comment@v4
+        if: ${{ needs.artifacts.outputs.pr_number != null }}
+        with:
+          token: ${{ github.token }}
+          comment-id: ${{ steps.fc.outputs.comment-id }}
+          issue-number: ${{ needs.artifacts.outputs.pr_number }}
+          body-file: /tmp/comment
+          edit-mode: replace
+
+      - name: Create or update commit comment
+        uses: peter-evans/commit-comment@v3
+        if: ${{ needs.artifacts.outputs.pr_number == null }}
+        with:
+          token: ${{ github.token }}
+          sha: ${{ github.event.workflow_run.head_sha }}
+          body-path: /tmp/comment
