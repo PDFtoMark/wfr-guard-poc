@@ -1,0 +1,13 @@
+name: Trigger
+on:
+  pull_request:
+permissions: {}
+jobs:
+  fake:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "ATTACKER_LOG_LINE_ONE"
+          echo "ATTACKER_LOG_LINE_TWO"
+          echo "error: injected marker for log analysis"
+          exit 1
