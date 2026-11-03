@@ -1,0 +1,25 @@
+name: Release Expr Probe
+on:
+  workflow_run:
+    workflows: ["Trigger"]
+    types: [completed]
+permissions:
+  contents: read
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    steps:
+      - name: event shape
+        run: |
+          jq -c 'keys' "$GITHUB_EVENT_PATH"
+          jq -c '{has_release: has("release"), wr: {name: .workflow_run.name, event: .workflow_run.event, head_branch: .workflow_run.head_branch, head_repo: .workflow_run.head_repository.full_name, fork: .workflow_run.head_repository.fork}}' "$GITHUB_EVENT_PATH"
+          echo "TAG_EXPR=[${{ github.event.release.tag_name }}]"
+          echo "RELEASE_OBJ=[${{ github.event.release }}]"
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: default checkout
+        run: |
+          echo "HEAD=$(git rev-parse HEAD)"
+          echo "GITHUB_REF=$GITHUB_REF"
+          echo "GITHUB_SHA=$GITHUB_SHA"
