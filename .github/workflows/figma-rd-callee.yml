@@ -1,0 +1,25 @@
+name: Figma RD Callee
+on:
+  workflow_call:
+    inputs:
+      ref:
+        required: false
+        type: string
+permissions:
+  id-token: write
+  issues: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        id: co
+        continue-on-error: true
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+      - name: Marker
+        run: |
+          echo "REUSABLE_CHECKOUT_OUTCOME=${{ steps.co.outcome }}"
+          if [ -f PWNED_FIGMA ]; then echo "REUSABLE_ATTACKER_CODE_EXECUTED=true"; else echo "REUSABLE_ATTACKER_CODE_EXECUTED=false"; fi
+          echo "REUSABLE_IDTOKEN_LEN=${#ACTIONS_ID_TOKEN_REQUEST_TOKEN}"
