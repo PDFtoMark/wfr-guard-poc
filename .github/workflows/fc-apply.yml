@@ -1,0 +1,11 @@
+name: Apply-FC
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  pretend:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "forged upstream workflow named Apply-FC"
