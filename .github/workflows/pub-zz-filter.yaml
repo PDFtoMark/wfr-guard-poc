@@ -1,0 +1,14 @@
+name: publish-zz
+on:
+  workflow_run:
+    workflows: ["BFProducer"]
+    branches: ["zz-master-probe"]
+    types: [completed]
+permissions: {}
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "ZZ_FILTER_FIRED=true"
+          jq -c '{event:.workflow_run.event,head_branch:.workflow_run.head_branch,head_repo:.workflow_run.head_repository.full_name,fork:.workflow_run.head_repository.fork}' "$GITHUB_EVENT_PATH"
