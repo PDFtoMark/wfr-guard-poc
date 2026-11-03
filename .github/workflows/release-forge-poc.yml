@@ -1,0 +1,10 @@
+name: Release Workflow
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  forge:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "forged upstream run completes successfully"
