@@ -1,0 +1,24 @@
+name: PROrigin Checkout Probe2
+on:
+  workflow_run:
+    workflows: ["Trigger"]
+    types: [completed]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: ctx
+        run: jq -c '{event:.workflow_run.event,head_branch:.workflow_run.head_branch,head_sha:.workflow_run.head_sha,head_repo:.workflow_run.head_repository.full_name,fork:.workflow_run.head_repository.fork,conclusion:.workflow_run.conclusion}' "$GITHUB_EVENT_PATH"
+      - uses: actions/checkout@v4
+      - name: inspect
+        env:
+          DEPLOY_CANARY: ${{ secrets.DEPLOY_CANARY }}
+        run: |
+          echo "HEAD=$(git rev-parse HEAD)"
+          echo "GITHUB_SHA=$GITHUB_SHA"
+          echo "GITHUB_REF=$GITHUB_REF"
+          if [ -f FORKMARKER.txt ]; then echo FORKMARKER_PRESENT=true; else echo FORKMARKER_PRESENT=false; fi
+          if [ -n "$DEPLOY_CANARY" ]; then echo SECRET_PRESENT=yes; else echo SECRET_PRESENT=no; fi
+          git config --get-regexp 'http.*extraheader' >/dev/null && echo PERSISTED_HEADER=yes || echo PERSISTED_HEADER=no
