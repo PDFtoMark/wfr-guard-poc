@@ -1,0 +1,60 @@
+name: nspr4 backport report
+
+# Posts the results of "nspr4 backport check" to each PR. Split from the check so that the
+# check, which builds PR code, never runs with write access. Never checks out or runs PR code.
+on:
+  workflow_run: # zizmor: ignore[dangerous-triggers] only reads the check's artifact, as data
+    workflows: [nspr4 backport check]
+    types: [completed]
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.workflow_run.head_repository.full_name }}-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: true
+
+jobs:
+  report:
+    name: Post nspr4 backport results
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read # Download the artifact.
+      issues: write # Create labels.
+      pull-requests: write # Comment and label.
+    steps:
+      - name: Download results
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name nspr4-backport-check --dir results
+
+      - name: Comment and label
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          EVENT: ${{ github.event.workflow_run.event }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          declare -A colors=([backportable]=0e8a16 ['needs review']=fbca04 [conflicts]=d93f0b ['not backportable']=b60205)
+          for verdict in "${!colors[@]}"; do
+            gh label create "nspr4: $verdict" --color "${colors[$verdict]}" --force
+          done
+
+          # A pull_request run uses the PR's copy of the check, so only trust it for that PR.
+          [ "$EVENT" != pull_request ] ||
+            allowed=$(gh pr list --limit 1000 --json number,headRefOid --jq ".[] | select(.headRefOid == \"$HEAD_SHA\") | .number")
+
+          for f in results/*.verdict; do
+            n=$(basename "$f" .verdict)
+            verdict=$(<"$f")
+            case $n in *[!0-9]*) echo "Ignoring $f" >&2; continue ;; esac
+            [ -n "${colors[$verdict]+set}" ] || { echo "Ignoring verdict $verdict for #$n" >&2; continue; }
+            [ "$EVENT" != pull_request ] || [ "$n" = "$allowed" ] || { echo "Ignoring #$n" >&2; continue; }
+
+            { printf '### nspr4 backport check\n\n'; cat "results/$n.md"; } |
+              gh pr comment "$n" --edit-last --create-if-none --body-file -
+
+            others=$(for v in "${!colors[@]}"; do [ "$v" = "$verdict" ] || printf 'nspr4: %s,' "$v"; done)
+            gh pr edit "$n" --add-label "nspr4: $verdict" --remove-label "${others%,}"
+          done
