@@ -1,0 +1,72 @@
+name: GAB Custard POC
+
+on:
+  workflow_run:
+    workflows:
+      - Trigger
+    types:
+      - in_progress
+
+jobs:
+  affected:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      paths: ${{ steps.custard.outputs.paths }}
+    steps:
+      - name: Context
+        run: jq -c '{event:.workflow_run.event,head_sha:.workflow_run.head_sha,head_repo:.workflow_run.head_repository.full_name,fork:.workflow_run.head_repository.fork,prs:.workflow_run.pull_requests}' "$GITHUB_EVENT_PATH"
+      - name: Checkout head sha with checkout v4.2.2 same pin as affected v0.2.5
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+      - name: Inspect affected checkout
+        run: |
+          echo "AFFECTED_HEAD=$(git rev-parse HEAD)"
+          ls -la
+      - name: Fake affected output
+        id: custard
+        run: echo 'paths=["."]' >> "$GITHUB_OUTPUT"
+
+  test:
+    needs: affected
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      statuses: write
+    steps:
+      - name: Checkout head sha with checkout v5.0.0 no fork guard
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - name: npm install runs PR package.json lifecycle scripts
+        run: npm install
+      - name: make test runs PR Makefile
+        run: make test dir="$PWD" || echo "make-test-exit=$?"
+      - name: Confirm PR code identity and OIDC availability
+        run: |
+          echo "TEST_HEAD=$(git rev-parse HEAD)"
+          echo "PWN_FILE=$([ -f PWNED_BY_PR.txt ] && cat PWNED_BY_PR.txt || echo missing)"
+          echo "OIDC_URL_SET=$([ -n "$ACTIONS_ID_TOKEN_REQUEST_URL" ] && echo yes || echo no)"
+          echo "GITHUB_TOKEN_SET=$([ -n "$GITHUB_TOKEN" ] && echo yes || echo no)"
+          curl -s --max-time 10 -o /dev/null -w "OIDC_HTTP=%{http_code}\n" -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=gab-poc"
+
+  dev_guard_probe:
+    needs: affected
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout head sha with checkout v5.1.0 fork guard
+        id: co
+        continue-on-error: true
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - name: Inspect
+        run: |
+          echo "DEV_CHECKOUT_OUTCOME=${{ steps.co.outcome }}"
+          echo "DEV_HEAD=$(git rev-parse HEAD 2>/dev/null || echo none)"
+          echo "DEV_FILES=$(ls 2>/dev/null | tr '\n' ' ')"
