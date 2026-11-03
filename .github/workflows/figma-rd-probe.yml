@@ -1,0 +1,30 @@
+name: Figma RD Probe
+on:
+  workflow_run:
+    workflows: ['Figma Forge Upstream']
+    types: [completed]
+permissions:
+  id-token: write
+  issues: write
+jobs:
+  release:
+    name: Release Debug
+    runs-on: ubuntu-latest
+    steps:
+      - name: ctx
+        run: jq -c '{event:.workflow_run.event,head_sha:.workflow_run.head_sha,head_branch:.workflow_run.head_branch,head_repo:.workflow_run.head_repository.full_name,conclusion:.workflow_run.conclusion}' "$GITHUB_EVENT_PATH"
+      - name: Checkout Branch
+        id: co
+        continue-on-error: true
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - name: Marker
+        run: |
+          echo "CHECKOUT_OUTCOME=${{ steps.co.outcome }}"
+          if [ -f PWNED_FIGMA ]; then echo "ATTACKER_CODE_EXECUTED=true"; cat PWNED_FIGMA; else echo "ATTACKER_CODE_EXECUTED=false"; fi
+      - name: OIDC probe
+        if: always()
+        run: |
+          echo "IDTOKEN_LEN=${#ACTIONS_ID_TOKEN_REQUEST_TOKEN}"
