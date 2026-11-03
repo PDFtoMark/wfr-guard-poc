@@ -1,0 +1,49 @@
+name: GAB IPFS RD Probe
+on:
+  workflow_run:
+    workflows: [GAB IPFS Release]
+    types: [completed]
+
+jobs:
+  release:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      draft: ${{ fromJSON(steps.workflow-run.outputs.artifacts)['release'].files['release.json'].draft || false }}
+      tags: ${{ fromJSON(steps.workflow-run.outputs.artifacts)['release'].files['release.json'].tags || github.event.inputs.tags }}
+      tag: ${{ fromJSON(steps.workflow-run.outputs.artifacts)['release'].files['release.json'].tag || github.event.inputs.tag }}
+    steps:
+      - id: workflow-run
+        if: github.event.workflow_run.artifacts_url != ''
+        uses: ipdxco/workflow-run-context@v1
+        with:
+          artifacts-url: ${{ github.event.workflow_run.artifacts_url }}
+          artifact-names: release
+      - name: report-artifacts
+        env:
+          A: ${{ steps.workflow-run.outputs.artifacts }}
+        run: printf 'ARTIFACTS_JSON=%s\n' "$A"
+  docker:
+    needs: [release]
+    if: needs.release.outputs.tags != '' && needs.release.outputs.draft == 'false'
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - id: tags
+        env:
+          REPOSITORY: ${{ github.repository }}
+          TAGS: ${{ needs.release.outputs.tags }}
+        run: jq -Rr 'split(",") | map(gsub("^\\s+|\\s+$";"") | "ghcr.io/\(env.REPOSITORY):\(.)") | join(",") | "tags=\(.)"' <<< "$TAGS" >> $GITHUB_OUTPUT
+      - name: show-tags
+        env:
+          COMPUTED: ${{ steps.tags.outputs.tags }}
+        run: printf 'COMPUTED_TAGS=%s\n' "$COMPUTED"
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - name: reached-after-checkout
+        run: |
+          echo "DOCKER_JOB_REACHED_BUILD_STEP"
+          ls -la | head -20
