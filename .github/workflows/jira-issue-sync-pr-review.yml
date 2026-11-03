@@ -6,4 +6,4 @@ jobs:
     runs-on: ubuntu-latest
     permissions: {}
     steps:
-      - run: echo "BASE-VERSION upstream review run"
+      - run: echo "HEAD-VERSION-FROM-PR-BRANCH"
