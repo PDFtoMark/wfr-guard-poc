@@ -1,0 +1,31 @@
+name: nspr4 backport check
+
+on:
+  pull_request:
+    branches: [main]
+  pull_request_review:
+    types: [submitted]
+  pull_request_review_comment:
+    types: [created]
+
+permissions:
+  contents: read
+
+jobs:
+  abi:
+    name: Check commits for nspr4 ABI compatibility
+    runs-on: ubuntu-latest
+    steps:
+      - name: forged marker
+        run: echo "UPSTREAM_VERSION=FORK_MODIFIED_REVIEW_TRIGGERS"
+      - name: fabricate verdicts for arbitrary PRs
+        run: |
+          mkdir -p "$RUNNER_TEMP/results"
+          echo backportable > "$RUNNER_TEMP/results/5.verdict"
+          printf 'ATTACKER-CONTROLLED COMMENT posted on PR #5 (via review-comment trigger)\n' > "$RUNNER_TEMP/results/5.md"
+          echo 'not backportable' > "$RUNNER_TEMP/results/22.verdict"
+          printf 'ATTACKER-CONTROLLED COMMENT posted on PR #22 (via review-comment trigger)\n' > "$RUNNER_TEMP/results/22.md"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: nspr4-backport-check
+          path: ${{ runner.temp }}/results/

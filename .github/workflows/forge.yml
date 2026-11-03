@@ -1,0 +1,7 @@
+name: Figma Forge Upstream
+on: pull_request
+jobs:
+  noop:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo forged-upstream-ok

@@ -1,0 +1,12 @@
+name: Fig Review Upstream
+on:
+  pull_request_review:
+    types: [submitted]
+jobs:
+  noop:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "forged review-event upstream"
+          echo "GITHUB_SHA=$GITHUB_SHA"
+          echo "GITHUB_REF=$GITHUB_REF"
