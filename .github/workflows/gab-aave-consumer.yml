@@ -1,0 +1,8 @@
+name: GAB Aave Consumer
+on:
+  workflow_run:
+    workflows: [GAB Foundry Test]
+    types: [completed]
+jobs:
+  test:
+    uses: ./.github/workflows/gab-aave-comment.yml
