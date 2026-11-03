@@ -14,7 +14,7 @@ jobs:
       - name: checkout-pr-sha
         id: co
         continue-on-error: true
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
       - name: inspect
