@@ -1,0 +1,10 @@
+name: Build Node (Standard)
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  fake:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "FORGED_SUCCESS head_ref=${{ github.head_ref }} actor=${{ github.actor }}"
