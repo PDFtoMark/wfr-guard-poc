@@ -1,0 +1,29 @@
+name: AR Watcher
+on:
+  workflow_run:
+    workflows: ['Builds - Ubuntu']
+    types: [completed]
+permissions:
+  actions: write
+  contents: read
+jobs:
+  retry:
+    if: github.event.workflow_run.conclusion == 'failure' && github.event.workflow_run.run_attempt == 1
+    runs-on: ubuntu-latest
+    steps:
+      - name: probe
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          jq -c '{event:.workflow_run.event,name:.workflow_run.name,conclusion:.workflow_run.conclusion,attempt:.workflow_run.run_attempt,head_branch:.workflow_run.head_branch,head_repo:.workflow_run.head_repository.full_name,actor:.workflow_run.actor.login,triggering:.workflow_run.triggering_actor.login}' "$GITHUB_EVENT_PATH"
+          echo "--- jobs of triggering run ---"
+          curl -sS -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/repos/${{ github.repository }}/actions/runs/$RUN_ID/jobs?per_page=100" | jq -c '.jobs[] | {id,name,conclusion}'
+          echo "--- failed job logs ---"
+          for id in $(curl -sS -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/repos/${{ github.repository }}/actions/runs/$RUN_ID/jobs?per_page=100" | jq -r '.jobs[] | select(.conclusion=="failure") | .id'); do
+            curl -sSL -H "Authorization: Bearer $GH_TOKEN" -o /tmp/job.log -w "log_http=%{http_code}\n" "https://api.github.com/repos/${{ github.repository }}/actions/jobs/$id/logs"
+            grep -c 'License activation has failed' /tmp/job.log || true
+          done
+          echo "--- rerun failed jobs ---"
+          curl -sS -o /tmp/rr.json -w 'rerun_http=%{http_code}\n' -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/${{ github.repository }}/actions/runs/$RUN_ID/rerun-failed-jobs"
+          cat /tmp/rr.json
