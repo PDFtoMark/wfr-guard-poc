@@ -1,0 +1,23 @@
+name: probe-consumer
+on:
+  workflow_run:
+    workflows: [Poc Wfr Checkout Upstream]
+    types: [completed]
+jobs:
+  c:
+    runs-on: ubuntu-latest
+    steps:
+      - name: ctx
+        run: |
+          echo "event=${{ github.event_name }}"
+          echo "github.ref=${{ github.ref }}"
+          echo "github.sha=${{ github.sha }}"
+          echo "wr.head_branch=${{ github.event.workflow_run.head_branch }}"
+          echo "wr.head_sha=${{ github.event.workflow_run.head_sha }}"
+          echo "wr.conclusion=${{ github.event.workflow_run.conclusion }}"
+      - name: checkout default
+        uses: actions/checkout@v4
+      - name: show head
+        run: |
+          git log -1 --oneline
+          echo "marker: $(cat marker.txt 2>/dev/null || echo MISSING)"
