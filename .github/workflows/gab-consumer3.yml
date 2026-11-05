@@ -1,0 +1,56 @@
+name: "GAB Consumer3"
+on:
+  workflow_run:
+    workflows: ["GAB Producer3"]
+    types: [completed]
+    branches: [gab-head-y]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  check-training:
+    name: Verify Training Success
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.name == 'GAB Producer3' }}
+    steps:
+      - run: echo "GATE_PASSED"
+
+  deploy:
+    name: Deploy (privileged)
+    needs: check-training
+    runs-on: ubuntu-latest
+    environment: prod
+    steps:
+      - name: event context
+        run: |
+          jq -c '{event:.workflow_run.event, head_branch:.workflow_run.head_branch, head_repo:.workflow_run.head_repository.full_name, head_sha:.workflow_run.head_sha, fork:.workflow_run.head_repository.fork, conclusion:.workflow_run.conclusion, name:.workflow_run.name}' "$GITHUB_EVENT_PATH"
+          echo "GITHUB_REF=$GITHUB_REF"
+          echo "GITHUB_REPOSITORY=$GITHUB_REPOSITORY"
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: inspect checkout and secrets
+        env:
+          CANARY: ${{ secrets.DEPLOY_CANARY }}
+        run: |
+          echo "CHECKOUT_HEAD=$(git rev-parse HEAD)"
+          if [ -f ATTACKER_MARKER.txt ]; then echo ATTACKER_CODE_CHECKED_OUT=true; else echo ATTACKER_CODE_CHECKED_OUT=false; fi
+          if [ -n "$CANARY" ]; then echo SECRET_AVAILABLE=true; else echo SECRET_AVAILABLE=false; fi
+
+      - name: oidc token
+        run: |
+          TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange" | jq -r .value)
+          if [ -n "$TOKEN" ] && [ "$TOKEN" != "null" ]; then
+            echo "OIDC_TOKEN_ISSUED=true"
+            TOKEN="$TOKEN" python3 -c "
+          import base64, json, os
+          p = os.environ['TOKEN'].split('.')[1]
+          p += '=' * (-len(p) % 4)
+          c = json.loads(base64.urlsafe_b64decode(p))
+          print(json.dumps({k: c.get(k) for k in ('sub', 'aud', 'repository')}))
+          "
+          else
+            echo "OIDC_TOKEN_ISSUED=false"
+          fi
