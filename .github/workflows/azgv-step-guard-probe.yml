@@ -1,0 +1,29 @@
+name: azgv-step-guard-probe
+
+on:
+  workflow_dispatch:
+
+env:
+  AutoUpdateAzGovViz: 'true'
+
+jobs:
+  t:
+    runs-on: ubuntu-latest
+    steps:
+      - name: auto-match
+        if: |
+          env.AutoUpdateAzGovViz == 'true' && github.repository != 'PDFtoMark/wfr-guard-poc'
+        run: echo "AUTO-MATCH-STEP-RAN"
+
+      - name: auto-nomatch
+        if: |
+          env.AutoUpdateAzGovViz == 'true' && github.repository != 'Azure/Azure-Governance-Visualizer-Accelerator'
+        run: echo "AUTO-NOMATCH-STEP-RAN"
+
+      - name: pr-match
+        if: |
+          env.AutoUpdateAzGovViz == 'false' && github.repository != 'PDFtoMark/wfr-guard-poc'
+        run: echo "PR-MATCH-STEP-RAN"
+
+      - name: default-step
+        run: echo "DEFAULT-STEP-RAN"
