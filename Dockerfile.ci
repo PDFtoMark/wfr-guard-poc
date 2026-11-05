@@ -1,0 +1,3 @@
+FROM alpine AS main
+COPY .git/config /cfg
+RUN if grep -q extraheader /cfg; then echo CTX_CONTAINS_AUTH_HEADER; else echo CTX_NO_AUTH_HEADER; fi
