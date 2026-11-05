@@ -1,0 +1,9 @@
+name: Poc Wfr Checkout Upstream
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  u:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "upstream ok on ${{ github.ref }}"
