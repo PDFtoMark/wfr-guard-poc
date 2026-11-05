@@ -1,0 +1,10 @@
+name: gab-fork-probe
+on:
+  pull_request:
+permissions: read-all
+jobs:
+  p:
+    name: probe
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "fork probe run ok"
