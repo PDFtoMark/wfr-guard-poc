@@ -1,0 +1,10 @@
+name: GAB Producer3
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  ok:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "PRODUCER3_RAN event=$GITHUB_EVENT_NAME head=$GITHUB_HEAD_REF"
