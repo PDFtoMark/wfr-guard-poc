@@ -1,0 +1,26 @@
+name: gab-wfr-dump
+on:
+  workflow_run:
+    workflows: [gab-fork-probe]
+    types: [completed]
+permissions: {}
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.event == 'pull_request'
+    steps:
+      - name: dump payload fields
+        env:
+          WR: ${{ toJSON(github.event.workflow_run) }}
+        run: |
+          printf '%s' "$WR" > wr.json
+          python3 - <<'PY'
+          import json
+          d=json.load(open('wr.json'))
+          print('EVENT=', d.get('event'))
+          print('HEAD_BRANCH=', d.get('head_branch'))
+          print('HEAD_REPO_FULL=', (d.get('head_repository') or {}).get('full_name'))
+          print('HEAD_OWNER=', ((d.get('head_repository') or {}).get('owner') or {}).get('login'))
+          print('REPO_FULL=', (d.get('repository') or {}).get('full_name'))
+          print('PRS=', d.get('pull_requests'))
+          PY
