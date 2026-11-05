@@ -1,0 +1,36 @@
+name: Pages Deploy Sim
+
+on:
+  push:
+    branches: [main]
+    paths: [docs/**]
+  workflow_run:
+    workflows: ["Update Foundry llms.txt Documentation"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: ctx
+        run: |
+          jq -c '{event:.workflow_run.event,name:.workflow_run.name,head_branch:.workflow_run.head_branch,head_sha:.workflow_run.head_sha,head_repo:.workflow_run.head_repository.full_name,fork:.workflow_run.head_repository.fork,conclusion:.workflow_run.conclusion}' "$GITHUB_EVENT_PATH" || true
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: inspect
+        run: |
+          echo "GITHUB_REF=$GITHUB_REF"
+          echo "GITHUB_SHA=$GITHUB_SHA"
+          echo "HEAD=$(git rev-parse HEAD)"
+          if [ -f ATTACKER_MARKER.txt ]; then echo "CHECKOUT_ATTACKER_CODE=true"; else echo "CHECKOUT_ATTACKER_CODE=false"; fi
