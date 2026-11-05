@@ -1,0 +1,27 @@
+name: AIS Watcher (no head-repo gate)
+
+on:
+  workflow_run:
+    workflows: ["AIS PR Helper"]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  observe:
+    if: >-
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Observe payload (control, gate removed)
+        run: |
+          echo "NO_GATE_RAN"
+          echo "wfr_event=${{ github.event.workflow_run.event }}"
+          echo "wfr_conclusion=${{ github.event.workflow_run.conclusion }}"
+          echo "wfr_path=${{ github.event.workflow_run.path }}"
+          echo "wfr_head_repo=${{ github.event.workflow_run.head_repository.full_name }}"
+          echo "wfr_head_repo_id=${{ github.event.workflow_run.head_repository.id }}"
+          echo "base_repo_id=${{ github.event.repository.id }}"
+          echo "match=${{ github.event.workflow_run.head_repository.id == github.event.repository.id }}"
