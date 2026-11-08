@@ -1,0 +1,9 @@
+name: mm-ci
+on:
+  push:
+    branches: ["**"]
+jobs:
+  upstream:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "UPSTREAM_RAN ref=$GITHUB_REF"
