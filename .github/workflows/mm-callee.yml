@@ -1,0 +1,17 @@
+on:
+  workflow_call:
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: dump
+        run: |
+          echo "DOWNSTREAM_REF=$GITHUB_REF"
+          echo "EVENT=${{ github.event_name }}"
+          echo "WR_HEAD_BRANCH=${{ github.event.workflow_run.head_branch }}"
+          echo "WR_EVENT=${{ github.event.workflow_run.event }}"
+  build:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "GUARDED_JOB_RAN=true ref=$GITHUB_REF"
