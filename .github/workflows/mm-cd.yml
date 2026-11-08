@@ -1,0 +1,17 @@
+name: mm-cd
+on:
+  workflow_run:
+    workflows: ["mm-ci"]
+    branches-ignore: ["*"]
+    types:
+      - completed
+  push:
+    tags:
+      - "v*"
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  plugin-cd:
+    uses: ./.github/workflows/mm-callee.yml
+    secrets: inherit
